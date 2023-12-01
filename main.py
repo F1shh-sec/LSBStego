@@ -7,65 +7,61 @@
 # pixels of image and modify it
 from PIL import Image
  
-# Convert encoding data into 8-bit binary
-# form using ASCII value of characters
-def genData(data):
+# Convert encoding data into 8-bit binary form using ASCII value of characters
+def asci_to_binary(secret_message):
  
-        # list of binary codes
-        # of given data
-        newd = []
+        # Converts each ascii letter into binary data that can be appended to the message.
+        binary_data = []
+        for character in secret_message:
+            binary_data.append(format(ord(character), '08b'))
+        return binary_data
  
-        for i in data:
-            newd.append(format(ord(i), '08b'))
-        return newd
+# Pixels are modified according to the 8-bit binary data and finally returned
+def modPix(picture, secret_message):
  
-# Pixels are modified according to the
-# 8-bit binary data and finally returned
-def modPix(pix, data):
+    binary_data = asci_to_binary(secret_message)
+    data_length = len(binary_data)
+    data_from_image = iter(picture)
  
-    datalist = genData(data)
-    lendata = len(datalist)
-    imdata = iter(pix)
- 
-    for i in range(lendata):
+    for i in range(data_length):
  
         # Extracting 3 pixels at a time
-        pix = [value for value in imdata.__next__()[:3] +
-                                imdata.__next__()[:3] +
-                                imdata.__next__()[:3]]
- 
-        # Pixel value should be made
-        # odd for 1 and even for 0
+        # data_from_image.__next__()[:3] pulls the last 3 bytes from that color channel the pixel Ex: (254, 255, 254)
+        picture = [value for value in data_from_image.__next__()[:3] +
+                                data_from_image.__next__()[:3] +
+                                data_from_image.__next__()[:3]]
+        # print("Data Pre Encoded:")
+        # print(picture)
+        # Pixel value should be made odd for 1 and even for 0
         for j in range(0, 8):
-            if (datalist[i][j] == '0' and pix[j]% 2 != 0):
-                pix[j] -= 1
+            if (binary_data[i][j] == '0' and picture[j]% 2 != 0):
+                picture[j] -= 1
  
-            elif (datalist[i][j] == '1' and pix[j] % 2 == 0):
-                if(pix[j] != 0):
-                    pix[j] -= 1
+            elif (binary_data[i][j] == '1' and picture[j] % 2 == 0):
+                if(picture[j] != 0):
+                    picture[j] -= 1
                 else:
-                    pix[j] += 1
+                    picture[j] += 1
                 # pix[j] -= 1
  
-        # Eighth pixel of every set tells
-        # whether to stop ot read further.
-        # 0 means keep reading; 1 means thec
-        # message is over.
-        if (i == lendata - 1):
-            if (pix[-1] % 2 == 0):
-                if(pix[-1] != 0):
-                    pix[-1] -= 1
+        # Eighth pixel of every set tells whether to stop ot read further. 0 means keep reading; 1 means the message is over.
+        if (i == data_length - 1):
+            if (picture[-1] % 2 == 0):
+                if(picture[-1] != 0):
+                    picture[-1] -= 1
                 else:
-                    pix[-1] += 1
+                    picture[-1] += 1
  
         else:
-            if (pix[-1] % 2 != 0):
-                pix[-1] -= 1
+            if (picture[-1] % 2 != 0):
+                picture[-1] -= 1
  
-        pix = tuple(pix)
-        yield pix[0:3]
-        yield pix[3:6]
-        yield pix[6:9]
+        picture = tuple(picture)
+        # print("Data Encoded:")
+        # print(picture)
+        yield picture[0:3]
+        yield picture[3:6]
+        yield picture[6:9]
  
 def encode_enc(newimg, data):
     w = newimg.size[0]
@@ -83,26 +79,27 @@ def encode_enc(newimg, data):
  
 # Encode data into image
 def encode():
-    img = input("Enter image name(with extension) : ")
-    image = Image.open(img, 'r')
+    file_name = input("Enter image name(with extension) : ")
+    image = Image.open(file_name, 'r')
  
-    data = input("Enter data to be encoded : ")
-    if (len(data) == 0):
+    secret_message = input("Enter data to be encoded : ")
+    if (len(secret_message) == 0):
         raise ValueError('Data is empty')
  
-    newimg = image.copy()
-    encode_enc(newimg, data)
+    stego_file = image.copy()
+    encode_enc(stego_file, secret_message)
  
-    new_img_name = input("Enter the name of new image(with extension) : ")
-    newimg.save(new_img_name, str(new_img_name.split(".")[1].upper()))
+    stego_file_name = input("Enter the name of new image(with extension) : ")
+    # First Param Filename, second param is the extension
+    stego_file.save(stego_file_name, str(stego_file_name.split(".")[1].upper()))
  
 # Decode the data in the image
 def decode():
-    img = input("Enter image name(with extension) : ")
-    image = Image.open(img, 'r')
+    stego_file_name = input("Enter image name(with extension) : ")
+    stego_file = Image.open(stego_file_name, 'r')
  
-    data = ''
-    imgdata = iter(image.getdata())
+    plain_text = ''
+    imgdata = iter(stego_file.getdata())
  
     while (True):
         pixels = [value for value in imgdata.__next__()[:3] +
@@ -111,16 +108,17 @@ def decode():
  
         # string of binary data
         binstr = ''
- 
+
+        # Odd = 1, even = 0.
         for i in pixels[:8]:
             if (i % 2 == 0):
                 binstr += '0'
             else:
                 binstr += '1'
  
-        data += chr(int(binstr, 2))
+        plain_text += chr(int(binstr, 2))
         if (pixels[-1] % 2 != 0):
-            return data
+            return plain_text
  
 # Main Function
 def main():
