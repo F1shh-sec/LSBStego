@@ -75,10 +75,19 @@ def modPix(picture, secret_message):
 def encode_enc(newimg, data):
     w = newimg.size[0]
     (x, y) = (0, 0)
- 
+    # data_from_image = iter(newimg.getdata())
+
     for pixel in modPix(newimg.getdata(), data):
- 
         # Putting modified pixels in the new image
+        # picture = [value for value in data_from_image.__next__()[:3] +
+        #                         data_from_image.__next__()[:3] +
+        #                         data_from_image.__next__()[:3]]
+        # # Pixel value should be made odd for 1 and even for 0
+        # has_transparency = False
+        # for i in picture:
+        #     if i > 200:
+        #         has_transparency=True
+        # if not has_transparency:
         newimg.putpixel((x, y), pixel)
         if (x == w - 1):
             x = 0
@@ -131,7 +140,7 @@ def decode():
     
             plain_text += chr(int(binstr, 2))
             if (pixels[-1] % 2 != 0):
-                return plain_text
+                return plain_text[:-2]
  
 # Main Function
 def main():
