@@ -93,6 +93,7 @@ def encode_enc(newimg, data):
 
     # Counts where we are in the current image (i dont think we need this because of the new param)
     # pixel_counter = 0
+    
     for pixel in modPix(newimg.getdata(), data):
         print()
         # Sets the current pixel to the 
@@ -126,8 +127,8 @@ def encode():
     image = Image.open(file_name, 'r')
  
     # secret_message = input("Enter data to be encoded : ")
-    secret_message = "Hello there!"
-    secret_message = secret_message + secret_message[-1]+ secret_message + secret_message[-1]+ secret_message+ secret_message[-1]
+    secret_message = "Hello!"
+    # secret_message = secret_message + secret_message[-1]+ secret_message + secret_message[-1]+ secret_message+ secret_message[-1]
     if (len(secret_message) == 0):
         raise ValueError('Data is empty')
  
@@ -143,30 +144,41 @@ def encode():
 def decode():
     stego_file_name = input("Enter image name(with extension) : ")
     stego_file = Image.open(stego_file_name, 'r')
- 
+    pixel_number = 0
     plain_text = ''
     imgdata = iter(stego_file.getdata())
     
+    
     while (True):
-        pixels = [value for value in imgdata.__next__()[:3] +
+        group_three_pixels = [value for value in imgdata.__next__()[:3] +
                                 imgdata.__next__()[:3] +
                                 imgdata.__next__()[:3]]
         binstr = ''
-        has_transparency = False
-        for i in pixels:
-            if i > 250:
-                has_transparency=True
-            if not has_transparency:
+        pixel_number +=3
+        has_transparent = False
+        for channel_values in group_three_pixels:
+            # has_transparency = False
+            if channel_values > 252:
+                has_transparent = True
+        if not has_transparent:
                 # Odd = 1, even = 0.
-                for i in pixels[:8]:
-                    if (i % 2 == 0):
-                        binstr += '0'
-                    else:
-                        binstr += '1'
+                
+                for channel_values in group_three_pixels[:8]:
+                        
+                        if (channel_values % 2 == 0):
+                            binstr += '0'
+                        else:
+                            binstr += '1'
         
                 plain_text += chr(int(binstr, 2))
-                if (pixels[-1] % 2 != 0):
-                    return plain_text[:-2]
+                if (group_three_pixels[-1] % 2 != 0):
+                    print("Decode last Piexl #:", pixel_number)
+                    print("last Data to be decoded: " + str(group_three_pixels))
+
+                    return plain_text
+                else:
+                    print("Decode Piexl #:", pixel_number)
+                    print("Data to be decoded: " + str(group_three_pixels))
 
 
 # Main Function
