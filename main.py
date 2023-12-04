@@ -44,7 +44,7 @@ def modPix(group_three_pixels, secret_message):
         has_transparency = False
         for pixel_channel_value in group_three_pixels:
             #Then we check if the value is larger then 254
-            if pixel_channel_value > 250:
+            if pixel_channel_value > 180:
                 has_transparency=True
         if not has_transparency:
             print("Data " + str(i) + " Pre Encoded: " + str(group_three_pixels))
@@ -158,7 +158,7 @@ def decode():
         has_transparent = False
         for channel_values in group_three_pixels:
             # has_transparency = False
-            if channel_values > 250:
+            if channel_values > 180:
                 has_transparent = True
         if not has_transparent:
                 # Odd = 1, even = 0.
