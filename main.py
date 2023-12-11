@@ -97,40 +97,56 @@ def modPix(group_three_pixels, secret_message):
 
 
 
-def encode_enc(newimg, data):
-    image_width = newimg.size[0]
-    (x, y) = (0, 0)
+def encode_enc(newimg, data, using_gif):
+	image_width = newimg.size[0]
+	(x, y) = (0, 0)
     # data_from_image = iter(newimg.getdata())
 
     # Counts where we are in the current image (i dont think we need this because of the new param)
     # pixel_counter = 0
+	
+	if using_gif:
+		for pixel in newimg.getdata():
+			print("pixel number: ", pixel[1])
 
-    for pixel in modPix(newimg.getdata(), data):
-        print()
-        # Sets the current pixel to the 
-        # x = pixel[1] + pixel_counter
-        print("pixel Number:", pixel[1])
+			x = pixel[1]
 
-        # Sets X to the pixel Number
-        x = pixel[1]
-        print("image width:", image_width)
-        if (x > image_width - 1):
-            y = math.floor(x/image_width)
-            x = x % (image_width)
-            print(y)
-        else:
-            # x = pixel[1] + pixel_counter
-            x = pixel[1]
-        # Uncomment the below like for writing real data    
-        #newimg.putpixel((x-1, y), pixel[0])
-        # uncomment the below line to yellow test pixels to see where data is being written
-        newimg.putpixel((x, y), (245, 245, 0))
-        # pixel_counter += 1
-        # if pixel_counter == 3:
-        #     pixel_counter = 0
+			if (x > image_width - 1):
+				y = math.floor(x / image_width)
+				x = x % (image_width)
+				print(y)
+			else:
+				x = pixel[1]
+
+			newimg.putpixel((x - 1, y), pixel[0])
+
+	else:
+		for pixel in modPix(newimg.getdata(), data):
+			print()
+			# Sets the current pixel to the 
+			# x = pixel[1] + pixel_counter
+			print("pixel Number:", pixel[1])
+
+			# Sets X to the pixel Number
+			x = pixel[1]
+			print("image width:", image_width)
+			if (x > image_width - 1):
+				y = math.floor(x/image_width)
+				x = x % (image_width)
+				print(y)
+			else:
+				# x = pixel[1] + pixel_counter
+				x = pixel[1]
+			# Uncomment the below like for writing real data    
+			newimg.putpixel((x-1, y), pixel[0])
+			# uncomment the below line to yellow test pixels to see where data is being written
+			#newimg.putpixel((x, y), (245, 245, 0))
+			# pixel_counter += 1
+			# if pixel_counter == 3:
+			#     pixel_counter = 0
 
     # need to return newimg for GIF encoding
-    return newimg
+	return newimg
 
 
 
@@ -236,7 +252,7 @@ def enc_gif(file_name, secret_message):
 	# get gif color table values
 	gif_GCT = get_gif_GCT(file_name)
 
-	print(f'gif_GCT = {gif_GCT}')
+	#print(f'gif_GCT = {gif_GCT}')
 
 	for frame_num in range(original.n_frames):
 		original.seek(frame_num)
@@ -246,7 +262,9 @@ def enc_gif(file_name, secret_message):
 
 		# only encode the message into the first frame
 		if frame_num == 0:
-			new_frame = encode_enc(new_frame, secret_message)			
+			# TODO potentially remove this
+			secret_message = "!BEGINMESSAGE!" + secret_message
+			new_frame = encode_enc(new_frame, secret_message, True)			
 			#new_frame.thumbnail((gif_size[0], gif_size[1])) # resize to the size of the gif
 			#new_frame = new_frame.convert(Image.ADAPTIVE, palette = gif_GCT, colors = gif_GCT_size)
 			new.append(new_frame)
@@ -270,12 +288,13 @@ def encode():
 		raise ValueError('Data is empty')
 
 	if file_name[-3:].lower() == 'gif':
+		secret_message = secret_message + "!ENDOFMESSAGE!"
 		enc_gif(file_name, secret_message)
 
 	else:
 		stego_file = image.copy()
 		secret_message = secret_message + "!ENDOFMESSAGE!"
-		encode_enc(stego_file, secret_message)  
+		encode_enc(stego_file, secret_message, False)  
 		stego_file_name = input("Enter the name of the new image (with extension): ")
 		# First Param Filename, second param is the extension
 		stego_file.save(stego_file_name, str(stego_file_name.split(".")[1].upper()))
@@ -284,47 +303,64 @@ def encode():
 
 # # Decode the data in the image
 def decode():
-    stego_file_name = input("Enter image name (with extension): ")
-    stego_file = Image.open(stego_file_name, 'r')
-    pixel_number = 0
-    plain_text = ''
-    imgdata = iter(stego_file.getdata())
-    
-    
-    while (True):
-        group_three_pixels = [value for value in imgdata.__next__()[:3] +
-                                imgdata.__next__()[:3] +
-                                imgdata.__next__()[:3]]
-        binstr = ''
-        pixel_number +=3
-        has_transparent = False
-        for channel_values in group_three_pixels:
-            # has_transparency = False
-            if channel_values > 180:
-                has_transparent = True
-        if not has_transparent:
-                # Odd = 1, even = 0.
+	pixel_number = 0
+	plain_text = ''
+	dec_gif = False
 
-                for channel_values in group_three_pixels[:8]:
+	stego_file_name = input("Enter image name (with extension): ")
 
-                        if (channel_values % 2 == 0):
-                            binstr += '0'
-                        else:
-                            binstr += '1'
+	if stego_file_name[-3:].lower() == 'gif':
+		dec_gif = True
+		original = Image.open(stego_file_name)
 
-                plain_text += chr(int(binstr, 2))
+		original.seek(0)
 
-                if (group_three_pixels[-1] % 2 != 0):
-                    print("Decode last Pixel #:", pixel_number)
-                    print("last Data to be decoded: " + str(group_three_pixels))
+		new_frame = Image.new('RGB', original.size)
+		new_frame.paste(original)
 
-                    #print("plain_text hex: ", plain_text.encode("utf-8").hex())
-                    plain_text_filtered = plain_text.split("!ENDOFMESSAGE!")[0]
-                    return plain_text_filtered
+		imgdata = iter(new_frame.getdata())
 
-                else:
-                    print("Decode Pixel #:", pixel_number)
-                    print("Data to be decoded: " + str(group_three_pixels))
+	else:
+		stego_file = Image.open(stego_file_name, 'r')
+		imgdata = iter(stego_file.getdata())
+
+	while (True):
+		group_three_pixels = [value for value in imgdata.__next__()[:3] +
+								imgdata.__next__()[:3] +
+								imgdata.__next__()[:3]]
+		binstr = ''
+		pixel_number += 3
+		has_transparent = False
+		for channel_values in group_three_pixels:
+			# has_transparency = False
+			if channel_values > 180:
+				has_transparent = True
+		if not has_transparent:
+			# Odd = 1, even = 0.
+
+			for channel_values in group_three_pixels[:8]:
+
+					if (channel_values % 2 == 0):
+						binstr += '0'
+					else:
+						binstr += '1'
+
+			plain_text += chr(int(binstr, 2))
+
+			print(f'plain_text = {plain_text}')
+
+			if (group_three_pixels[-1] % 2 != 0):
+			#if "!ENDOFMESSAGE!" in plain_text:
+				print("Decode last Pixel #:", pixel_number)
+				print("last Data to be decoded: " + str(group_three_pixels))
+
+				#print("plain_text hex: ", plain_text.encode("utf-8").hex())
+				plain_text_filtered = plain_text.split("!ENDOFMESSAGE!")[0]
+				return plain_text_filtered
+
+			else:
+				print("Decode Pixel #:", pixel_number)
+				print("Data to be decoded: " + str(group_three_pixels))
 
 
 
