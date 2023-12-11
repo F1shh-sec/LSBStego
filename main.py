@@ -1,8 +1,6 @@
 
-# From https://www.geeksforgeeks.org/image-based-steganography-using-python/
+# Base LSB forked from https://github.com/goelashwin36/image-steganography/tree/master
 
-# Python program implementing Image Steganography
- 
 # PIL module is used to extract
 # pixels of image and modify it
 from asyncore import loop
@@ -25,7 +23,6 @@ def modPix(group_three_pixels, secret_message):
 
     # Counts how many chunks of 3 pixels we ran through
     i = 1
-
     # counts how many non transparent pixels we stored info to
     loop_counter = 0
     # Counts how many pixels we passed. Used for calculating where to put the pixels
@@ -33,7 +30,8 @@ def modPix(group_three_pixels, secret_message):
     # SO the issue is that we run through the image datalength before hitting a non transparent pixel
     while loop_counter < data_length:
         # Extracting 3 pixels at a time
-        # data_from_image.__next__()[:3] pulls the last 3 bytes from that color channel the pixel Ex: (254, 255, 254)
+        # data_from_image.__next__()[:3] pulls the last 3 bytes from 
+        # that color channel the pixel Ex: (254, 255, 254)
         group_three_pixels = [value for value in data_from_image.__next__()[:3] +
                                 data_from_image.__next__()[:3] +
                                 data_from_image.__next__()[:3]]
@@ -43,11 +41,11 @@ def modPix(group_three_pixels, secret_message):
         # Pixels are assumed to not be transparent
         has_transparency = False
         for pixel_channel_value in group_three_pixels:
-            #Then we check if the value is larger then 254
+            #Then we check if the value is larger then 180
             if pixel_channel_value > 180:
                 has_transparency=True
         if not has_transparency:
-            print("Data " + str(i) + " Pre Encoded: " + str(group_three_pixels))
+            print("Data Pixel Number " + str(pixel_number) + " Pre Encoded: " + str(group_three_pixels))
             
             # Pixel value should be made odd for 1 and even for 0
             for j in range(0, 8):
@@ -59,7 +57,6 @@ def modPix(group_three_pixels, secret_message):
                         group_three_pixels[j] -= 1
                     else:
                         group_three_pixels[j] += 1
-                    # pix[j] -= 1
     
             # Eighth pixel of every set tells whether to stop ot read further. 0 means keep reading; 1 means the message is over.
             if (i == data_length - 1):
@@ -74,7 +71,8 @@ def modPix(group_three_pixels, secret_message):
                     group_three_pixels[-1] -= 1
     
             group_three_pixels = tuple(group_three_pixels)
-            print("Data " + str(i) + " Encoded: " + str(group_three_pixels))
+            print("Data Pixel Number " + str(pixel_number) + " Encoded: " + str(group_three_pixels))
+            print()
             # yeald is like return for generators.
             # remember we increment pixel_number by 3, so we need to decrement it here to get the right pixel number
             yield (group_three_pixels[0:3], pixel_number-2)
@@ -89,46 +87,35 @@ def modPix(group_three_pixels, secret_message):
 def encode_enc(newimg, data):
     image_width = newimg.size[0]
     (x, y) = (0, 0)
-    # data_from_image = iter(newimg.getdata())
-
-    # Counts where we are in the current image (i dont think we need this because of the new param)
-    # pixel_counter = 0
-    
     for pixel in modPix(newimg.getdata(), data):
-        print()
+        # print()
         # Sets the current pixel to the 
-        # x = pixel[1] + pixel_counter
-        print("pixel Number:", pixel[1])
+        # print("pixel Number:", pixel[1])
 
         # Sets X to the pixel Number
         x = pixel[1]
-        print("image width:", image_width)
+        # print("image width:", image_width)
         if (x > image_width - 1):
             y = math.floor(x/image_width)
             x = x % (image_width)
-            print(y)
+            # print(y)
         else:
-            # x = pixel[1] + pixel_counter
             x = pixel[1]
+        
         # Uncomment the below like for writing real data    
         newimg.putpixel((x-1, y), pixel[0])
-        # uncomment the below line to yellow test pixels to see where data is being written
-        # newimg.putpixel((x, y), (245, 245, 0))
-        # pixel_counter += 1
-        # if pixel_counter == 3:
-        #     pixel_counter = 0
+        # uncomment the below line to yellow test 
+        # pixels to see where data is being written
+        # newimg.putpixel((x-1, y), (245, 0, 0))
         
         
  
 # Encode data into image
 def encode():
-    # file_name = input("Enter image name(with extension) : ")
-    file_name = "cat.png"
+    file_name = input("Enter image name(with extension) : ")
     image = Image.open(file_name, 'r')
  
-    # secret_message = input("Enter data to be encoded : ")
-    secret_message = "Hello! Hello! Hello! Hello! Hello! Hello! Hello! Hello!"
-    # secret_message = secret_message + secret_message[-1]+ secret_message + secret_message[-1]+ secret_message+ secret_message[-1]
+    secret_message = input("Enter data to be encoded : ")
     if (len(secret_message) == 0):
         raise ValueError('Data is empty')
  
@@ -157,14 +144,12 @@ def decode():
         pixel_number +=3
         has_transparent = False
         for channel_values in group_three_pixels:
-            # has_transparency = False
             if channel_values > 180:
                 has_transparent = True
         if not has_transparent:
-                # Odd = 1, even = 0.
-                
+           
                 for channel_values in group_three_pixels[:8]:
-                        
+                        # Odd = 1, even = 0.
                         if (channel_values % 2 == 0):
                             binstr += '0'
                         else:
@@ -172,13 +157,10 @@ def decode():
         
                 plain_text += chr(int(binstr, 2))
                 if (group_three_pixels[-1] % 2 != 0):
-                    print("Decode last Piexl #:", pixel_number)
-                    print("last Data to be decoded: " + str(group_three_pixels))
-
-                    return plain_text[:-1]
+                    print("Decode last Piexl #:" + str(pixel_number) + ": "+ str(group_three_pixels))
+                    return plain_text.split("!ENDOFMESSAGE!")[0]
                 else:
-                    print("Decode Piexl #:", pixel_number)
-                    print("Data to be decoded: " + str(group_three_pixels))
+                    print("Decode last Piexl #:" + str(pixel_number) + ": "+ str(group_three_pixels))
 
 
 # Main Function
