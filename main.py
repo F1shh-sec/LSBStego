@@ -107,18 +107,43 @@ def encode_enc(newimg, data):
         # uncomment the below line to yellow test 
         # pixels to see where data is being written
         # newimg.putpixel((x-1, y), (245, 0, 0))
+    return newimg
         
-        
+
+       
+def enc_gif(file_name, secret_message):
+	original = Image.open(file_name)
+
+	new = []
+
+	#print(f'gif_GCT = {gif_GCT}')
+
+	for frame_num in range(original.n_frames):
+		original.seek(frame_num)
+		new_frame = Image.new('RGB', original.size)
+		new_frame.paste(original)
+		# only encode the message into the first frame
+		if frame_num == 0:
+			new_frame = encode_enc(new_frame, secret_message)			
+		new.append(new_frame)
+	new[0].save('output.gif', format = 'GIF', append_images = new[1:], save_all = True, duration = original.n_frames, loop = 0)
+
  
 # Encode data into image
 def encode():
     file_name = input("Enter image name(with extension) : ")
+    # file_name = "giphy.gif"
     image = Image.open(file_name, 'r')
- 
-    secret_message = input("Enter data to be encoded : ")
+    secret_message = input("Enter data to be encoded : ") + "!ENDOFMESSAGE!"
+    # secret_message =  "!ENDOFMESSAGE!"
     if (len(secret_message) == 0):
         raise ValueError('Data is empty')
- 
+    if file_name[-3:].lower() == 'gif':
+        enc_gif(file_name, secret_message)
+        return
+    # if file_name[-3:].lower() == 'gif':
+    #     stego_file = new_frame.copy()
+    # else:
     stego_file = image.copy()
     encode_enc(stego_file, secret_message)
  
@@ -130,12 +155,22 @@ def encode():
 # # Decode the data in the image
 def decode():
     stego_file_name = input("Enter image name(with extension) : ")
+    # stego_file_name = "output.gif"
     stego_file = Image.open(stego_file_name, 'r')
     pixel_number = 0
     plain_text = ''
     imgdata = iter(stego_file.getdata())
     
-    
+    if stego_file_name[-3:].lower() == 'gif':
+        original = Image.open(stego_file_name, 'r')
+        original.seek(0)
+        new_frame = Image.new('RGB', original.size)
+        new_frame.paste(original)
+
+        new_frame.save('test.png')
+
+        imgdata = iter(new_frame.getdata())
+          
     while (True):
         group_three_pixels = [value for value in imgdata.__next__()[:3] +
                                 imgdata.__next__()[:3] +
@@ -156,7 +191,8 @@ def decode():
                             binstr += '1'
         
                 plain_text += chr(int(binstr, 2))
-                if (group_three_pixels[-1] % 2 != 0):
+                # if (group_three_pixels[-1] % 2 != 0):
+                if "!ENDOFMESSAGE!" in plain_text:
                     print("Decode last Piexl #:" + str(pixel_number) + ": "+ str(group_three_pixels))
                     return plain_text.split("!ENDOFMESSAGE!")[0]
                 else:
